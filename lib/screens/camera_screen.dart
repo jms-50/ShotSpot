@@ -55,10 +55,11 @@ class _CameraScreenState extends State<CameraScreen> {
       await ref.putFile(_image!);
       final imageUrl = await ref.getDownloadURL();
 
-      await FirebaseFirestore.instance.collection('photos').add({
+      await FirebaseFirestore.instance.collection('spot_photos').add({
         'imageUrl': imageUrl,
         'userId': user.uid,
         'spotId': widget.spotId,
+        'storagePath': ref.fullPath,
         'createdAt': FieldValue.serverTimestamp(),
       });
 

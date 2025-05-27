@@ -108,29 +108,29 @@ class _LoginScreenState extends State<LoginScreen> {
             _isLoading
                 ? const CircularProgressIndicator()
                 : Column(
-                  children: [
-                    ElevatedButton(
-                      onPressed: _signInWithId,
-                      child: const Text('ID로 로그인'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: _signInWithGoogle,
-                      icon: const Icon(Icons.account_circle),
-                      label: const Text('Google로 로그인'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const SignUpScreen(),
-                          ),
-                        );
-                      },
-                      child: const Text('계정이 없으신가요? 회원가입'),
-                    ),
-                  ],
+              children: [
+                ElevatedButton(
+                  onPressed: _signInWithId,
+                  child: const Text('ID로 로그인'),
                 ),
+                OutlinedButton.icon(
+                  onPressed: _signInWithGoogle,
+                  icon: const Icon(Icons.account_circle),
+                  label: const Text('Google로 로그인'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SignUpScreen(),
+                      ),
+                    );
+                  },
+                  child: const Text('계정이 없으신가요? 회원가입'),
+                ),
+              ],
+            ),
           ],
         ),
       ),
