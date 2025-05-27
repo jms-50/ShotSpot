@@ -4,34 +4,12 @@ import 'package:url_launcher/url_launcher.dart';
 import 'guide_screen.dart';
 import 'camera_screen.dart';
 
-class DetailPage extends StatefulWidget {
+class DetailPage extends StatelessWidget {
   final String spotId;
   const DetailPage({super.key, required this.spotId});
 
-  @override
-  State<DetailPage> createState() => _DetailPageState();
-}
-
-class _DetailPageState extends State<DetailPage> {
-  late Future<DocumentSnapshot> _spotFuture;
-  late Future<List<String>> _photoUrlsFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _spotFuture = FirebaseFirestore.instance.collection('spots').doc(widget.spotId).get();
-    _photoUrlsFuture = _fetchSpotPhotos(widget.spotId);
-  }
-
-  Future<List<String>> _fetchSpotPhotos(String spotId) async {
-    final snapshot = await FirebaseFirestore.instance
-        .collection('spot_photos')
-        .where('spotId', isEqualTo: spotId)
-        .get();
-
-    final allPhotos = snapshot.docs.map((doc) => doc['imageUrl'] as String).toList();
-    allPhotos.shuffle(); // 랜덤 순서
-    return allPhotos.take(5).toList(); // 최대 5장만 보여줌
+  Future<DocumentSnapshot> _fetchSpotData() {
+    return FirebaseFirestore.instance.collection('spots').doc(spotId).get();
   }
 
   void _launchMap(String spotName) async {
@@ -39,7 +17,7 @@ class _DetailPageState extends State<DetailPage> {
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url));
     } else {
-      print("지도 열기 실패");
+      print("Could not launch map for $spotName");
     }
   }
 
@@ -47,62 +25,62 @@ class _DetailPageState extends State<DetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text('포토 스팟 상세'), backgroundColor: Colors.white),
+      appBar: AppBar(
+        title: const Text('포토 스팟 상세'),
+        backgroundColor: Colors.white,
+      ),
       body: FutureBuilder<DocumentSnapshot>(
-        future: _spotFuture,
-        builder: (context, spotSnapshot) {
-          if (spotSnapshot.connectionState == ConnectionState.waiting) {
+        future: _fetchSpotData(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (!spotSnapshot.hasData || !spotSnapshot.data!.exists) {
+          if (!snapshot.hasData || !snapshot.data!.exists) {
             return const Center(child: Text('데이터를 찾을 수 없습니다.', style: TextStyle(color: Colors.black)));
           }
 
-          final data = spotSnapshot.data!.data() as Map<String, dynamic>;
+          final data = snapshot.data!.data() as Map<String, dynamic>;
           final name = data['name'] ?? '제목 없음';
           final description = data['description'] ?? '설명 없음';
           final hashtags = List<String>.from(data['hashtags'] ?? []);
-          final nearbySpots = List<String>.from(data['nearby'] ?? []);
+          final imageUrls = List<String>.from(data['images'] ?? []); // 스와이프 이미지
+          final nearbySpots = List<String>.from(data['nearby'] ?? []); // 근처 스팟 이름 리스트
 
           return SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 랜덤 공개 이미지 표시
-                FutureBuilder<List<String>>(
-                  future: _photoUrlsFuture,
-                  builder: (context, photoSnapshot) {
-                    if (photoSnapshot.connectionState == ConnectionState.waiting) {
-                      return const SizedBox(
-                        height: 200,
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-
-                    final photos = photoSnapshot.data ?? [];
-
-                    return SizedBox(
-                      height: 200,
-                      child: PageView(
-                        children: photos.isNotEmpty
-                            ? photos.map((url) => Image.network(url, fit: BoxFit.cover)).toList()
-                            : [Image.asset('assets/sample.jpg', fit: BoxFit.cover)],
-                      ),
-                    );
-                  },
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => GuidePage(spotId: spotId,)),
+                  ),
+                  child: SizedBox(
+                    height: 200,
+                    child: PageView(
+                      children: imageUrls.isNotEmpty
+                          ? imageUrls
+                          .map((url) => Image.network(url, fit: BoxFit.cover))
+                          .toList()
+                          : [
+                        Image.asset('assets/sample.jpg', fit: BoxFit.cover),
+                      ],
+                    ),
+                  ),
                 ),
-
-                // 해시태그
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Wrap(
                     spacing: 8,
-                    children: hashtags.map((tag) => Chip(label: Text('#$tag'))).toList(),
+                    children: hashtags
+                        .map((tag) => Chip(
+                      label: Text('#$tag'),
+                      backgroundColor: Colors.grey[200],
+                    ))
+                        .toList(),
                   ),
                 ),
-
-                // 지도 링크
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: GestureDetector(
@@ -111,21 +89,16 @@ class _DetailPageState extends State<DetailPage> {
                       children: const [
                         Icon(Icons.map, color: Colors.blue),
                         SizedBox(width: 4),
-                        Text('Google지도에서 보기', style: TextStyle(color: Colors.black)),
+                        Text('네이버지도에서 보기', style: TextStyle(color: Colors.black)),
                       ],
                     ),
                   ),
                 ),
-
-                // 설명
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Text(description, style: const TextStyle(color: Colors.black)),
                 ),
-
                 const Divider(color: Colors.black12),
-
-                // 근처 포토 스팟
                 const Padding(
                   padding: EdgeInsets.all(8.0),
                   child: Text('근처 포토 스팟', style: TextStyle(fontSize: 18, color: Colors.black)),
@@ -145,15 +118,12 @@ class _DetailPageState extends State<DetailPage> {
                     },
                   ),
                 ),
-
                 const Spacer(),
-
-                // 사진 촬영 버튼
                 Center(
                   child: ElevatedButton.icon(
                     onPressed: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => CameraScreen(spotId: widget.spotId)),
+                      MaterialPageRoute(builder: (_) => CameraScreen(spotId: spotId,)),
                     ),
                     icon: const Icon(Icons.camera_alt),
                     label: const Text('사진 촬영'),
