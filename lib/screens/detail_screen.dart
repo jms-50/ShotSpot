@@ -1,139 +1,93 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'guide_screen.dart';
-import 'camera_screen.dart';
 
-class DetailPage extends StatelessWidget {
-  final String spotId;
-  const DetailPage({super.key, required this.spotId});
+class DetailScreen extends StatelessWidget {
+  const DetailScreen({super.key});
 
-  Future<DocumentSnapshot> _fetchSpotData() {
-    return FirebaseFirestore.instance.collection('spots').doc(spotId).get();
-  }
-
-  void _launchMap(String spotName) async {
-    final url = 'nmap://search?query=$spotName';
+  void _launchMap() async {
+    const url = 'https://map.naver.com/v5/search/한강공원';
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url));
-    } else {
-      print("Could not launch map for $spotName");
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final Map<String, dynamic>? spot =
+    ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+    final String name = spot?['name'] ?? '포토스팟 이름';
+    final String description = spot?['description'] ?? '이곳은 사진이 잘 나오는 장소입니다.';
+    final List<String> hashtags = List<String>.from(spot?['hashtags'] ?? ['#강추천', '#인생샷']);
+
+    final List<String> imageUrls = List<String>.from(spot?['images'] ?? [
+      'https://via.placeholder.com/300x200',
+      'https://via.placeholder.com/300x200?text=Second',
+    ]);
+
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('포토 스팟 상세'),
-        backgroundColor: Colors.white,
-      ),
-      body: FutureBuilder<DocumentSnapshot>(
-        future: _fetchSpotData(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(child: Text('데이터를 찾을 수 없습니다.', style: TextStyle(color: Colors.black)));
-          }
-
-          final data = snapshot.data!.data() as Map<String, dynamic>;
-          final name = data['name'] ?? '제목 없음';
-          final description = data['description'] ?? '설명 없음';
-          final hashtags = List<String>.from(data['hashtags'] ?? []);
-          final imageUrls = List<String>.from(data['images'] ?? []); // 스와이프 이미지
-          final nearbySpots = List<String>.from(data['nearby'] ?? []); // 근처 스팟 이름 리스트
-
-          return SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => GuidePage(spotId: spotId,)),
-                  ),
-                  child: SizedBox(
-                    height: 200,
-                    child: PageView(
-                      children: imageUrls.isNotEmpty
-                          ? imageUrls
-                          .map((url) => Image.network(url, fit: BoxFit.cover))
-                          .toList()
-                          : [
-                        Image.asset('assets/sample.jpg', fit: BoxFit.cover),
-                      ],
-                    ),
-                  ),
+      appBar: AppBar(title: Text(name)),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 이미지 스와이프
+            SizedBox(
+              height: 200,
+              child: PageView.builder(
+                itemCount: imageUrls.length,
+                itemBuilder: (context, index) => ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(imageUrls[index], fit: BoxFit.cover),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Wrap(
-                    spacing: 8,
-                    children: hashtags
-                        .map((tag) => Chip(
-                      label: Text('#$tag'),
-                      backgroundColor: Colors.grey[200],
-                    ))
-                        .toList(),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: GestureDetector(
-                    onTap: () => _launchMap(name),
-                    child: Row(
-                      children: const [
-                        Icon(Icons.map, color: Colors.blue),
-                        SizedBox(width: 4),
-                        Text('네이버지도에서 보기', style: TextStyle(color: Colors.black)),
-                      ],
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(description, style: const TextStyle(color: Colors.black)),
-                ),
-                const Divider(color: Colors.black12),
-                const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Text('근처 포토 스팟', style: TextStyle(fontSize: 18, color: Colors.black)),
-                ),
-                SizedBox(
-                  height: 150,
-                  child: PageView.builder(
-                    itemCount: nearbySpots.length,
-                    controller: PageController(viewportFraction: 0.8),
-                    itemBuilder: (context, index) {
-                      return Card(
-                        color: Colors.grey[100],
-                        child: Center(
-                          child: Text(nearbySpots[index], style: const TextStyle(color: Colors.black)),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const Spacer(),
-                Center(
-                  child: ElevatedButton.icon(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => CameraScreen(spotId: spotId,)),
-                    ),
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text('사진 촬영'),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
+              ),
             ),
-          );
-        },
+            const SizedBox(height: 16),
+
+            // 해시태그
+            Wrap(
+              spacing: 8,
+              children: hashtags
+                  .map((tag) => Chip(label: Text(tag)))
+                  .toList(),
+            ),
+            const SizedBox(height: 16),
+
+            // 설명
+            Text(
+              description,
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 24),
+
+            // 네이버 지도 버튼
+            ElevatedButton.icon(
+              onPressed: _launchMap,
+              icon: const Icon(Icons.map),
+              label: const Text("지도에서 보기"),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // 촬영 가이드 버튼
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pushNamed(context, '/guide', arguments: spot);
+              },
+              icon: const Icon(Icons.camera_alt),
+              label: const Text("촬영 가이드 보기"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
