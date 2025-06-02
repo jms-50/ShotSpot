@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shot_spot/screens/camera_screen.dart';
+import 'package:shot_spot/screens/detail_screen.dart';
+import 'package:shot_spot/screens/guide_screen.dart';
+import 'screens/auth/find_password_screen.dart';
+import 'screens/auth/signup_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/map_screen.dart';
 import 'screens/mypage_screen.dart';
@@ -22,6 +27,18 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData.light(),
       home: const AuthGate(),
+      routes: {
+        '/main':(context) => const MainScreen(),
+        '/camera':(context) => const CameraScreen(),
+        '/home': (context) => const HomeScreen(),
+        '/guide': (context) => const GuideScreen(),
+        '/mypage': (context) => const MyPageScreen(),
+        '/map': (context) => const MapScreen(),
+        '/detail': (context) => const DetailScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/signup': (context) => const SignUpScreen(),
+        '/find': (context) => const FindPasswordScreen(),
+      },
     );
   }
 }
