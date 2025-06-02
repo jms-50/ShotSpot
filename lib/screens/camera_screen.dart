@@ -33,7 +33,8 @@ class _CameraScreenState extends State<CameraScreen> {
     await _controller.initialize();
     setState(() => _isCameraInitialized = true);
 
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     _spotId = args?['name'] ?? 'unknown_spot';
   }
 
@@ -48,9 +49,9 @@ class _CameraScreenState extends State<CameraScreen> {
     final bytes = await File(_capturedImage!.path).readAsBytes();
     final result = await ImageGallerySaver.saveImage(Uint8List.fromList(bytes));
     if (result['isSuccess']) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("사진이 갤러리에 저장되었습니다")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("사진이 갤러리에 저장되었습니다")));
     }
     setState(() => _capturedImage = null);
   }
@@ -59,7 +60,8 @@ class _CameraScreenState extends State<CameraScreen> {
     if (_capturedImage == null) return;
 
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    final path = 'spot_photos/$uid/${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final path =
+        'spot_photos/$uid/${DateTime.now().millisecondsSinceEpoch}.jpg';
     final file = File(_capturedImage!.path);
 
     final ref = FirebaseStorage.instance.ref().child(path);
@@ -74,9 +76,9 @@ class _CameraScreenState extends State<CameraScreen> {
       'createdAt': Timestamp.now(),
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("공개 저장이 완료되었습니다")),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("공개 저장이 완료되었습니다")));
     setState(() => _capturedImage = null);
   }
 
@@ -92,7 +94,11 @@ class _CameraScreenState extends State<CameraScreen> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.file(File(_capturedImage!.path), height: 320, fit: BoxFit.cover),
+            child: Image.file(
+              File(_capturedImage!.path),
+              height: 320,
+              fit: BoxFit.cover,
+            ),
           ),
           const SizedBox(height: 16),
           Row(
@@ -129,21 +135,23 @@ class _CameraScreenState extends State<CameraScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("사진 촬영")),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Expanded(child: _buildPreviewOrCamera()),
-            if (_capturedImage == null)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: FloatingActionButton.extended(
-                  onPressed: _takePicture,
-                  icon: const Icon(Icons.camera_alt),
-                  label: const Text("촬영"),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Expanded(child: _buildPreviewOrCamera()),
+              if (_capturedImage == null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: FloatingActionButton.extended(
+                    onPressed: _takePicture,
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text("촬영"),
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

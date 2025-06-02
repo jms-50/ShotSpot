@@ -26,10 +26,35 @@ class _HomeScreenState extends State<HomeScreen> {
         .snapshots();
   }
 
-  Widget _buildSpotCard(DocumentSnapshot spot) {
-    final String name = spot['name'] ?? '이름 없음';
-    final int likes = spot['likes'] ?? 0;
-    final String? thumbnail = spot['thumbnailUrl'];
+  /// 예시 포토스팟 데이터 (Firestore 아님)
+  final Map<String, dynamic> sampleSpot = {
+    'name': '예시 포토존',
+    'likes': 999,
+    'thumbnailUrl': 'https://cdn.pixabay.com/photo/2022/10/08/11/13/banghwa-bridge-7506744_1280.jpg',
+    'isExample': true, // 예시 카드임을 표시
+  };
+
+  //예시용 카드 처리를 위한 코드가 적용됨. 예시용 카드 없을시 수정 필요.
+  Widget _buildSpotCard(dynamic spot) {
+    String name = spot['name'] ?? '이름 없음';
+    int likes = spot['likes'] ?? 0;
+    String? thumbnail = spot['thumbnailUrl'];
+
+    bool isExample = false;
+
+    if (spot is DocumentSnapshot) {
+      name = spot['name'] ?? '이름 없음';
+      likes = spot['likes'] ?? 0;
+      thumbnail = spot['thumbnailUrl'];
+    } else if (spot is Map<String, dynamic>) {
+      name = spot['name'] ?? '이름 없음';
+      likes = spot['likes'] ?? 0;
+      thumbnail = spot['thumbnailUrl'];
+      isExample = spot['isExample'] ?? false;
+    } else {
+      // 타입이 맞지 않으면 빈 카드 반환
+      return const SizedBox.shrink();
+    }
 
     return Card(
       elevation: 3,
@@ -95,12 +120,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     return const Center(child: CircularProgressIndicator());
                   }
                   final spots = snapshot.data!.docs;
-                  if (spots.isEmpty) {
+
+                  final combinedSpots = [sampleSpot, ...spots];
+
+                  if (combinedSpots.isEmpty) {
                     return const Center(child: Text("추천 포토스팟이 없습니다"));
                   }
                   return ListView.builder(
-                    itemCount: spots.length,
-                    itemBuilder: (context, index) => _buildSpotCard(spots[index]),
+                    itemCount: combinedSpots.length,
+                    itemBuilder: (context, index) => _buildSpotCard(combinedSpots[index]),
                   );
                 },
               ),
@@ -108,17 +136,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      /*
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onTabTapped,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: '홈'),
-          BottomNavigationBarItem(icon: Icon(Icons.map), label: '지도'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: '마이페이지'),
-        ],
-      ),
-      */
     );
   }
 }
