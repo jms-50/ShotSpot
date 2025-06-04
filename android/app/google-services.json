@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "671274223620",
+    "project_id": "shotspot-12b2c",
+    "storage_bucket": "shotspot-12b2c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:671274223620:android:21d54fc5b8aeb673380d51",
+        "android_client_info": {
+          "package_name": "com.example.shot_spot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA8uyA4Eyb4C90bIsI2Fs2DYB1DAmC_JuM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
