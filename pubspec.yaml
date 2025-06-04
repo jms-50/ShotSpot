@@ -33,6 +33,10 @@ dependencies:
   google_maps_flutter: ^2.5.0
   cupertino_icons: ^1.0.8
   url_launcher: ^6.2.5
+  xml: ^6.5.0
+  http: ^1.4.0
+  mime: ^2.0.0
+  path: any
   #image
   image_picker: ^1.0.4
   image_gallery_saver:
