@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -16,6 +17,7 @@ class _MapScreenState extends State<MapScreen> {
   final TextEditingController _searchController = TextEditingController();
   final Set<Marker> _markers = {};
   String? _selectedSpotName;
+  String? _selectedSpotTitle;
 
   @override
   void initState() {
@@ -23,15 +25,23 @@ class _MapScreenState extends State<MapScreen> {
     _initLocation();
   }
 
+  // 입력값 정규화 함수: 공백 제거 + 소문자 변환
+  String normalize(String input) {
+    return input.replaceAll(RegExp(r'\s+'), '').toLowerCase();
+  }
+
   Future<void> _initLocation() async {
     LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
       await Geolocator.requestPermission();
     }
     final position = await Geolocator.getCurrentPosition();
     _currentLocation = LatLng(position.latitude, position.longitude);
 
-    _controller?.animateCamera(CameraUpdate.newLatLngZoom(_currentLocation!, 14));
+    _controller?.animateCamera(
+      CameraUpdate.newLatLngZoom(_currentLocation!, 14),
+    );
 
     setState(() {
       _markers.add(
@@ -48,23 +58,28 @@ class _MapScreenState extends State<MapScreen> {
     try {
       final locations = await locationFromAddress(query);
       if (locations.isNotEmpty) {
-        final latLng = LatLng(locations.first.latitude, locations.first.longitude);
-        final spotId = MarkerId(query);
+        final latLng = LatLng(
+          locations.first.latitude,
+          locations.first.longitude,
+        );
+        final normalizedName = normalize(query);
 
         setState(() {
           _markers.add(
             Marker(
-              markerId: spotId,
+              markerId: MarkerId(normalizedName),
               position: latLng,
               infoWindow: InfoWindow(title: query),
               onTap: () {
                 setState(() {
-                  _selectedSpotName = query;
+                  _selectedSpotName = normalizedName;
+                  _selectedSpotTitle = query;
                 });
               },
             ),
           );
-          _selectedSpotName = query;
+          _selectedSpotName = normalizedName;
+          _selectedSpotTitle = query;
         });
 
         _controller?.animateCamera(CameraUpdate.newLatLngZoom(latLng, 15));
@@ -108,15 +123,30 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _buildBottomInfoCard() {
-    if (_selectedSpotName == null) return const SizedBox.shrink();
+    if (_selectedSpotName == null || _selectedSpotTitle == null) {
+      return const SizedBox.shrink();
+    }
 
     return Positioned(
       bottom: 30,
       left: 16,
       right: 16,
       child: GestureDetector(
-        onTap: () {
-          Navigator.pushNamed(context, '/detail');
+        onTap: () async {
+          final snapshot = await FirebaseFirestore.instance
+              .collection('spots')
+              .where('name', isEqualTo: _selectedSpotName)
+              .limit(1)
+              .get();
+
+          if (snapshot.docs.isNotEmpty) {
+            final spotData = snapshot.docs.first.data();
+            Navigator.pushNamed(context, '/detail', arguments: spotData);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("해당 장소의 데이터가 존재하지 않습니다.")),
+            );
+          }
         },
         child: Container(
           padding: const EdgeInsets.all(16),
@@ -129,8 +159,11 @@ class _MapScreenState extends State<MapScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                _selectedSpotName!,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                _selectedSpotTitle!,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const Icon(Icons.chevron_right),
             ],
@@ -149,10 +182,16 @@ class _MapScreenState extends State<MapScreen> {
               ? const Center(child: CircularProgressIndicator())
               : GoogleMap(
             onMapCreated: (controller) => _controller = controller,
-            initialCameraPosition: CameraPosition(target: _currentLocation!, zoom: 14),
+            initialCameraPosition: CameraPosition(
+              target: _currentLocation!,
+              zoom: 14,
+            ),
             myLocationEnabled: true,
             markers: _markers,
-            onTap: (_) => setState(() => _selectedSpotName = null),
+            onTap: (_) => setState(() {
+              _selectedSpotName = null;
+              _selectedSpotTitle = null;
+            }),
           ),
           _buildSearchBar(),
           _buildBottomInfoCard(),
