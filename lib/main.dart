@@ -27,6 +27,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData.light(),
       home: const AuthGate(),
+
       routes: {
         '/main':(context) => const MainScreen(),
         '/camera':(context) => const CameraScreen(),
