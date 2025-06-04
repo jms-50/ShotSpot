@@ -15,9 +15,11 @@ class CameraScreen extends StatefulWidget {
 }
 
 class _CameraScreenState extends State<CameraScreen> {
-  late CameraController _controller;
   late List<CameraDescription> _cameras;
+  late CameraController _controller;
   bool _isCameraInitialized = false;
+  bool _isFrontCamera = false;
+
   XFile? _capturedImage;
   String? _spotId;
 
@@ -29,13 +31,29 @@ class _CameraScreenState extends State<CameraScreen> {
 
   Future<void> _initializeCamera() async {
     _cameras = await availableCameras();
-    _controller = CameraController(_cameras[0], ResolutionPreset.medium);
+    final selectedCamera = _cameras.firstWhere(
+          (camera) =>
+      camera.lensDirection ==
+          (_isFrontCamera ? CameraLensDirection.front : CameraLensDirection.back),
+      orElse: () => _cameras.first,
+    );
+
+    _controller = CameraController(selectedCamera, ResolutionPreset.medium);
     await _controller.initialize();
-    setState(() => _isCameraInitialized = true);
 
     final args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     _spotId = args?['name'] ?? 'unknown_spot';
+
+    setState(() => _isCameraInitialized = true);
+  }
+
+  Future<void> _switchCamera() async {
+    setState(() {
+      _isCameraInitialized = false;
+      _isFrontCamera = !_isFrontCamera;
+    });
+    await _initializeCamera();
   }
 
   Future<void> _takePicture() async {
@@ -47,12 +65,15 @@ class _CameraScreenState extends State<CameraScreen> {
     if (_capturedImage == null) return;
 
     final bytes = await File(_capturedImage!.path).readAsBytes();
-    final result = await ImageGallerySaver.saveImage(Uint8List.fromList(bytes));
+    final result =
+    await ImageGallerySaver.saveImage(Uint8List.fromList(bytes));
+
     if (result['isSuccess']) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("사진이 갤러리에 저장되었습니다")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("사진이 갤러리에 저장되었습니다")),
+      );
     }
+
     setState(() => _capturedImage = null);
   }
 
@@ -76,9 +97,9 @@ class _CameraScreenState extends State<CameraScreen> {
       'createdAt': Timestamp.now(),
     });
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text("공개 저장이 완료되었습니다")));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("공개 저장이 완료되었습니다")),
+    );
     setState(() => _capturedImage = null);
   }
 
@@ -102,22 +123,29 @@ class _CameraScreenState extends State<CameraScreen> {
           ),
           const SizedBox(height: 16),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              ElevatedButton.icon(
-                icon: const Icon(Icons.save),
-                label: const Text("갤러리 저장"),
-                onPressed: _saveToGallery,
+              Expanded(
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.save),
+                  label: const Text("갤러리 저장"),
+                  onPressed: _saveToGallery,
+                ),
               ),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.public),
-                label: const Text("공개 저장"),
-                onPressed: _uploadToFirebase,
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.public),
+                  label: const Text("공개 저장"),
+                  onPressed: _uploadToFirebase,
+                ),
               ),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.refresh),
-                label: const Text("다시 찍기"),
-                onPressed: () => setState(() => _capturedImage = null),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.refresh),
+                  label: const Text("다시 찍기"),
+                  onPressed: () => setState(() => _capturedImage = null),
+                ),
               ),
             ],
           ),
@@ -127,7 +155,17 @@ class _CameraScreenState extends State<CameraScreen> {
       if (!_isCameraInitialized) {
         return const Center(child: CircularProgressIndicator());
       }
-      return CameraPreview(_controller);
+      return Stack(
+        alignment: Alignment.topRight,
+        children: [
+          CameraPreview(_controller),
+          IconButton(
+            icon: const Icon(Icons.flip_camera_ios, color: Colors.white),
+            onPressed: _switchCamera,
+            tooltip: '카메라 전환',
+          ),
+        ],
+      );
     }
   }
 
@@ -143,7 +181,7 @@ class _CameraScreenState extends State<CameraScreen> {
               Expanded(child: _buildPreviewOrCamera()),
               if (_capturedImage == null)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.only(top: 12),
                   child: FloatingActionButton.extended(
                     onPressed: _takePicture,
                     icon: const Icon(Icons.camera_alt),
