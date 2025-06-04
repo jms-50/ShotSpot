@@ -26,19 +26,17 @@ class _HomeScreenState extends State<HomeScreen> {
         .snapshots();
   }
 
-  /// 예시 포토스팟 데이터 (Firestore 아님)
-  final Map<String, dynamic> sampleSpot = {
-    'name': '예시 포토존',
-    'likes': 999,
-    'thumbnailUrl': 'https://cdn.pixabay.com/photo/2022/10/08/11/13/banghwa-bridge-7506744_1280.jpg',
-    'isExample': true, // 예시 카드임을 표시
-  };
 
-  //예시용 카드 처리를 위한 코드가 적용됨. 예시용 카드 없을시 수정 필요.
+
   Widget _buildSpotCard(dynamic spot) {
     String name = spot['name'] ?? '이름 없음';
     int likes = spot['likes'] ?? 0;
     String? thumbnail = spot['thumbnailUrl'];
+    String description = spot['description'] ?? '장소 소개';
+    List<dynamic> hashtags = spot['hashtags'];
+    List<dynamic> images = spot['images'];
+    double latitude = spot['latitude'] ?? 0.0;
+    double longitude = spot['longitude'] ?? 0.0;
 
     bool isExample = false;
 
@@ -46,10 +44,20 @@ class _HomeScreenState extends State<HomeScreen> {
       name = spot['name'] ?? '이름 없음';
       likes = spot['likes'] ?? 0;
       thumbnail = spot['thumbnailUrl'];
+      description = spot['description'] ?? '장소 소개';
+      hashtags = spot['hashtags'];
+      images = spot['images'];
+      longitude = spot['longitude'] ?? 0.0;
+      latitude = spot['latitude'] ?? 0.0;
     } else if (spot is Map<String, dynamic>) {
       name = spot['name'] ?? '이름 없음';
       likes = spot['likes'] ?? 0;
       thumbnail = spot['thumbnailUrl'];
+      description = spot['description'] ?? '장소 소개';
+      hashtags = spot['hashtags'];
+      images = spot['images'];
+      longitude = spot['longitude'] ?? 0.0;
+      latitude = spot['latitude'] ?? 0.0;
       isExample = spot['isExample'] ?? false;
     } else {
       // 타입이 맞지 않으면 빈 카드 반환
@@ -78,7 +86,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text("좋아요 $likes개"),
-        onTap: () => Navigator.pushNamed(context, '/detail', arguments: spot),
+        onTap: () {
+          final data = spot.data() as Map<String, dynamic>;
+          Navigator.pushNamed(context, '/detail', arguments: data);
+        },
         trailing: const Icon(Icons.chevron_right),
       ),
     );
@@ -121,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   }
                   final spots = snapshot.data!.docs;
 
-                  final combinedSpots = [sampleSpot, ...spots];
+                  final combinedSpots = [...spots];
 
                   if (combinedSpots.isEmpty) {
                     return const Center(child: Text("추천 포토스팟이 없습니다"));
